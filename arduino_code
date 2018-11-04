@@ -1,0 +1,88 @@
+#include <SD.h>
+#include <SPI.h>
+
+File my_file;
+
+int data_pin = 23;
+int clk_pin = 25;
+int latch_pin = 27;
+
+byte matrix_data[9][8] = {
+  {0b0000,0b0000,0b0000,0b0000,0b0000,0b0000,0b0000,0b0000},
+  {0b1111,0b0000,0b0000,0b0000,0b0000,0b0000,0b0000,0b0000},
+  {0b1111,0b1111,0b0000,0b0000,0b0000,0b0000,0b0000,0b0000},
+  {0b1111,0b1111,0b1111,0b0000,0b0000,0b0000,0b0000,0b0000},
+  {0b1111,0b1111,0b1111,0b1111,0b1111,0b0000,0b0000,0b0000},  
+  {0b1111,0b1111,0b1111,0b1111,0b1111,0b0000,0b0000,0b0000},
+  {0b1111,0b1111,0b1111,0b1111,0b1111,0b1111,0b0000,0b0000},
+  {0b1111,0b1111,0b1111,0b1111,0b1111,0b1111,0b1111,0b0000},
+  {0b1111,0b1111,0b1111,0b1111,0b1111,0b1111,0b1111,0b1111},
+};
+
+void setup() {
+  Serial.begin(9600);
+
+  pinMode(53,OUTPUT);
+  digitalWrite(53,HIGH);
+  
+  while(!Serial){
+    ;
+  }
+  
+  Serial.println("Initialization SD card ..");
+  
+  if (!SD.begin()) {
+    Serial.println("initialization failed!");
+    return;
+  }
+ 
+  Serial.println("initialization done.");
+
+  pinMode(clk_pin, OUTPUT);
+  pinMode(data_pin, OUTPUT);
+  pinMode(latch_pin, OUTPUT);
+  
+  my_file =  SD.open("data.txt");
+
+}
+
+
+void loop() {
+  
+  Serial.println("good morning");
+  int a[8] = {27,27,27,27,27,27,27,27};
+  int i = 0;
+  if (my_file) {
+    if (my_file.available()) {
+      while(i<8){
+        Serial.println(a[i]);
+         while(((a[i]!=0)&&(a[i]!=1)&&(a[i]!=2)&&(a[i]!=3)&&(a[i]!=4)&&(a[i]!=5)&&(a[i]!=6)&&(a[i]!=7)&&(a[i]!=8))){
+          a[i] = my_file.read()-'0';
+          Serial.println(a[i]);
+          }  
+         i++;
+      }
+    }
+  }
+  for(int j = 0;j < 20;j++){
+    for(int i = 0;i <8 ;i++){
+      digitalWrite(latch_pin,LOW);
+      shiftOut(data_pin,clk_pin,LSBFIRST,1<<i);
+      for(int k = 0;k < 2;k++){
+        shiftOut(data_pin,clk_pin,LSBFIRST,0b11111111);      
+      }
+      int b[4];
+      for(int l = 0;l < 4;l++){
+        b[l] = (matrix_data[a[2l+1]][i]<<4)+(matrix_data[a[2l]][i]) ;
+      }
+      for(int k =0 ;k < 4;k++){
+          shiftOut(data_pin,clk_pin,LSBFIRST,b[k]);
+       }
+      digitalWrite(latch_pin,HIGH);
+      delay(1);
+    }    
+  }  
+  for(int l = 0;l < 8;l++){
+    a[l] = 27;
+  }
+}
